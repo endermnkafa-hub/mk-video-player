@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MK VideoPlayer</title>
+  <link rel="stylesheet" href="/assets/vendor/tailwind.css">
+  <style>
+    /* Sabit Vektörel İkon Boyutları (Tüm SVG'ler için kesin kurallar) */
+    svg {
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .icon-xs, svg.icon-xs { width: 12px !important; height: 12px !important; min-width: 12px !important; min-height: 12px !important; }
+    .icon-sm, svg.icon-sm { width: 15px !important; height: 15px !important; min-width: 15px !important; min-height: 15px !important; }
+    .icon-md, svg.icon-md { width: 18px !important; height: 18px !important; min-width: 18px !important; min-height: 18px !important; }
+    .icon-lg, svg.icon-lg { width: 22px !important; height: 22px !important; min-width: 22px !important; min-height: 22px !important; }
+
+    svg.w-3\.5, svg.h-3\.5 { width: 14px !important; height: 14px !important; min-width: 14px !important; min-height: 14px !important; }
+    svg.w-4, svg.h-4 { width: 16px !important; height: 16px !important; min-width: 16px !important; min-height: 16px !important; }
+    svg.w-5, svg.h-5 { width: 20px !important; height: 20px !important; min-width: 20px !important; min-height: 20px !important; }
+    svg.w-6, svg.h-6 { width: 24px !important; height: 24px !important; min-width: 24px !important; min-height: 24px !important; }
+    svg.w-8, svg.h-8 { width: 32px !important; height: 32px !important; min-width: 32px !important; min-height: 32px !important; }
+
+    /* Oynatıcı Kontrolleri Katmanı */
+    .player-controls {
+      transition: opacity 0.25s ease-in-out, visibility 0.25s ease-in-out;
+      background: linear-gradient(to top, rgba(2, 6, 23, 0.96) 0%, rgba(2, 6, 23, 0.82) 65%, transparent 100%);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .player-container:hover .player-controls,
+    .player-container:focus-within .player-controls,
+    .player-container.controls-active .player-controls,
+    .player-container.paused .player-controls,
+    .player-controls:hover,
+    .player-controls.is-visible {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      visibility: visible !important;
+    }
+
+    /* Oynatıcı Butonları */
+    .ctrl-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      min-width: 26px;
+      min-height: 26px;
+      padding: 0;
+      border-radius: 6px;
+      color: #e2e8f0;
+      background-color: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .ctrl-btn:hover {
+      color: #ffffff;
+      background-color: rgba(51, 65, 85, 0.85);
+      border-color: rgba(148, 163, 184, 0.35);
+      transform: translateY(-1px);
+    }
+    .ctrl-btn:active {
+      transform: scale(0.93);
+    }
+
+    .ctrl-btn-primary {
+      background-color: rgba(37, 99, 235, 0.9);
+      color: #ffffff;
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    .ctrl-btn-primary:hover {
+      background-color: rgb(37, 99, 235);
+      border-color: rgb(96, 165, 250);
+    }
+
+    /* Oynatıcı Seçicileri (Kalite, Hız, Ses Boost, Sığdırma) */
+    .ctrl-select {
+      background-color: rgba(15, 23, 42, 0.9);
+      color: #e2e8f0;
+      border: 1px solid rgba(51, 65, 85, 0.8);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s ease;
+      height: 24px;
+    }
+    .ctrl-select:hover {
+      background-color: rgba(30, 41, 59, 0.95);
+      border-color: #3b82f6;
+      color: #ffffff;
+    }
+
+    /* İntro Atla Rozeti */
+    .skip-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background-color: rgba(37, 99, 235, 0.9);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .skip-badge:hover {
+      background-color: rgb(29, 78, 216);
+    }
+
+    .player-container.in-window-mode {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      border-radius: 0 !important;
+      border: none !important;
+      z-index: 45 !important;
+      margin: 0 !important;
+      background-color: #000000 !important;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Anime Detay & Bölüm Seçme Modalı Kesin Kaydırma Kuralları */
+    #animeDetailModal {
+      overflow-y: auto !important;
+    }
+    #animeDetailModal .anime-modal-card {
+      max-height: 85vh !important;
+      height: 85vh !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    #modalEpisodeScrollArea {
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      overscroll-behavior: contain !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    #modalEpisodeScrollArea::-webkit-scrollbar {
+      width: 6px;
+    }
+    #modalEpisodeScrollArea::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 9999px;
+    }
+    #modalEpisodeScrollArea::-webkit-scrollbar-thumb {
+      background: rgba(59, 130, 246, 0.5);
+      border-radius: 9999px;
+    }
+    #modalEpisodeScrollArea::-webkit-scrollbar-thumb:hover {
+      background: rgba(59, 130, 246, 0.8);
+    }
+
+    /* Anime Altyazı Stili */
+    video::cue {
+      background-color: rgba(15, 23, 42, 0.85);
+      color: #ffffff;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 0.9);
+      line-height: 1.4;
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+    .sub-size-sm video::cue { font-size: 13px !important; }
+    .sub-size-md video::cue { font-size: 16px !important; }
+    .sub-size-lg video::cue { font-size: 21px !important; }
+
+    /* Anime Restorasyon & Çizgi Kurtarma Filtreleri (GPU Hızlandırmalı) */
+    .enhance-anime-hd {
+      filter: url(#anime-restore-hd) saturate(1.12);
+      image-rendering: -webkit-optimize-contrast;
+    }
+    .enhance-anime-smooth {
+      filter: url(#anime-smooth-cel) saturate(1.14);
+    }
+    .enhance-anime-vivid {
+      filter: saturate(1.28) contrast(1.12);
+    }
+    .enhance-anime-ultra {
+      filter: url(#anime-ultra-edge) saturate(1.18);
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    /* En-Boy Oranı Sınıfları */
+    .aspect-16-9 {
+      aspect-ratio: 16 / 9 !important;
+      object-fit: fill !important;
+    }
+    .aspect-4-3 {
+      aspect-ratio: 4 / 3 !important;
+      object-fit: contain !important;
+      margin: 0 auto;
+    }
+    .aspect-cover {
+      object-fit: cover !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col font-sans antialiased overflow-hidden selection:bg-brand-500 selection:text-white">
+
+  <!-- Donanım Hızlandırmalı Anime Restorasyon & Çizgi Kurtarma Filtreleri -->
+  <svg style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;" aria-hidden="true">
+    <defs>
+      <!-- 1. Anime HD: Dengeli çizgi netleştirme & deblock (Çizgileri koyulaştırır ve inceltir) -->
+      <filter id="anime-restore-hd" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="0.45" result="denoised" />
+        <feGaussianBlur in="denoised" stdDeviation="1.6" result="blurred" />
+        <feComposite in="denoised" in2="blurred" operator="arithmetic" k1="0" k2="3.2" k3="-2.2" k4="0" />
+      </filter>
+
+      <!-- 2. Pürüzsüz Çizim (Toon Deblock & Cel-Shading) - Piksel karelerini eritip yumuşatır -->
+      <filter id="anime-smooth-cel" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="denoised" />
+        <feGaussianBlur in="denoised" stdDeviation="1.8" result="blurred" />
+        <feComposite in="denoised" in2="blurred" operator="arithmetic" k1="0" k2="2.4" k3="-1.4" k4="0" />
+      </filter>
+
+      <!-- 3. Ultra Eski Anime Restoratörü - 80'ler/90'lar sahte 720p/360p için agresif çizgi kurtarıcı -->
+      <filter id="anime-ultra-edge" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="denoised" />
+        <feGaussianBlur in="denoised" stdDeviation="2.0" result="blurred" />
+        <feComposite in="denoised" in2="blurred" operator="arithmetic" k1="0" k2="4.0" k3="-3.0" k4="0" />
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Üst çubuk: gezinme + adres çubuğu + kontroller -->
+  <header class="border-b border-slate-800 bg-slate-900 px-3 py-2 flex items-center gap-2 shrink-0">
+    <div class="flex items-center gap-2 mr-1">
+      <div class="p-1.5 bg-brand-600 rounded-lg text-white shadow-lg shadow-brand-500/20">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <span class="font-bold text-sm text-white">MK VideoPlayer</span>
+    </div>
+
+    <button id="btnBack" type="button" class="ctrl-btn text-slate-300 disabled:opacity-30" title="Geri" aria-label="Geri">
+      <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </button>
+    <button id="btnForward" type="button" class="ctrl-btn text-slate-300 disabled:opacity-30" title="İleri" aria-label="İleri">
+      <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </button>
+    <button id="btnReload" type="button" class="ctrl-btn text-slate-300" title="Yenile / Durdur" aria-label="Yenile">
+      <svg id="iconReload" class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <svg id="iconStop" class="icon-sm hidden text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+
+    <form id="addressForm" class="flex-1 flex items-center gap-2" autocomplete="off">
+      <input id="addressInput" type="text" spellcheck="false" placeholder="Anime adı arayın (örn. Solo Leveling, Death Note) veya web adresi yapıştırın…"
+        class="flex-1 bg-slate-950 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none">
+      <button id="btnGo" type="submit" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold py-1.5 px-3 rounded-lg flex items-center gap-1">
+        <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <span>Ara / Git</span>
+      </button>
+    </form>
+
+    <button id="btnCapture" type="button" class="text-xs font-semibold py-1.5 px-3 rounded-lg border border-slate-600 bg-slate-800 hover:bg-slate-700" aria-pressed="false">Kaynak algılamayı başlat</button>
+
+    <select id="popupMode" class="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs" title="Sayfanın açmak istediği yeni pencereler">
+      <option value="block">Yeni pencere: engelle</option>
+      <option value="same-tab">Yeni pencere: aynı sekmede aç</option>
+    </select>
+
+    <div class="flex rounded-lg overflow-hidden border border-slate-700 text-xs" role="group" aria-label="Yerleşim">
+      <button id="layoutDiscover" type="button" class="px-2 py-1.5 bg-brand-600 text-white font-medium flex items-center gap-1" title="Anime Keşfet ve Ara">
+        <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        <span>Keşfet</span>
+      </button>
+      <button id="layoutBrowser" type="button" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300">Web</button>
+      <button id="layoutSplit" type="button" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300">İkili</button>
+      <button id="layoutPlayer" type="button" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300">Oynatıcı</button>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <button id="btnShortcuts" type="button" class="px-2 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 flex items-center gap-1 font-medium transition-colors" title="Klavye Kısayolları (?)">
+        <kbd class="px-1 py-0.5 text-[10px] font-mono bg-slate-900 border border-slate-700 rounded text-slate-400">?</kbd>
+        <span class="hidden sm:inline">Kısayollar</span>
+      </button>
+      <button id="btnSettings" type="button" class="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 flex items-center gap-1.5 font-medium transition-colors" title="Uygulama ve Oturum Ayarları">
+        <svg class="icon-sm text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span>Ayarlar</span>
+      </button>
+    </div>
+  </header>
+
+  <div id="errorBanner" class="hidden shrink-0 px-4 py-2 bg-red-950 border-b border-red-800 text-xs text-red-200 flex items-center justify-between gap-3" role="alert">
+    <span id="errorText"></span>
+    <span class="flex gap-2 shrink-0">
+      <button id="btnRetry" type="button" class="hidden underline">Yeniden dene</button>
+      <button id="btnBackToPage" type="button" class="hidden underline">Orijinal sayfaya dön</button>
+      <button id="btnDismissError" type="button" class="underline">Kapat</button>
+    </span>
+  </div>
+  <div id="desktopWarning" class="hidden shrink-0 px-4 py-2 bg-amber-950 border-b border-amber-800 text-xs text-amber-200">
+    Gömülü tarayıcı yalnızca masaüstü uygulamasında çalışır. Lütfen <code>npm start</code> ile başlatın.
+  </div>
+
+  <main id="mainArea" class="flex-1 flex min-h-0">
+    <!-- Sol: gerçek gömülü Chromium tarayıcısı veya Keşfet / Arama Arayüzü -->
+    <section id="browserHost" class="flex-1 min-w-0 bg-slate-900 relative flex flex-col overflow-hidden">
+      <!-- Keşfet / Arama Paneli (Web görünümü pasifken doğrudan burada görüntülenir) -->
+      <div id="discoverView" class="flex-1 flex flex-col bg-slate-950 overflow-hidden text-slate-100">
+        <!-- Keşfet Üst Başlık & Filtreler -->
+        <div class="p-3 border-b border-slate-800/80 bg-slate-900/60 shrink-0 space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span id="discoverSectionIcon" class="text-brand-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/></svg>
+              </span>
+              <h3 id="discoverTitle" class="text-xs font-bold text-white uppercase tracking-wider">Trend ve Popüler Animeler</h3>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button id="btnDiscoverBackTrending" type="button" class="hidden px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] transition-colors flex items-center gap-1">
+                <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Trendlere Dön</span>
+              </button>
+              <button id="btnSwitchToBrowser" type="button" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-brand-300 text-[11px] font-medium border border-slate-700 transition-colors flex items-center gap-1" title="Açık web sayfasına geç">
+                <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                <span>Web Sayfası</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Format & Kategori Çipleri -->
+          <div class="flex flex-col gap-1.5">
+            <div id="formatChips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 text-[11px]">
+              <!-- Format butonları dinamik render edilecek (Tümü, Dizi, Film, OVA) -->
+            </div>
+            <div id="genreChips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 text-[11px]">
+              <!-- Genre butonları dinamik render edilecek -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Anime Kartları Izgarası -->
+        <div id="discoverScrollArea" class="flex-1 overflow-y-auto p-3">
+          <div id="discoverGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            <!-- Anime kartları buraya gelecek -->
+          </div>
+
+          <!-- Yükleniyor / Boş Durum Göstergesi -->
+          <div id="discoverLoading" class="flex items-center justify-center py-16 text-slate-400 text-xs gap-2">
+            <svg class="animate-spin w-4 h-4 text-brand-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+            <span>Animeler yükleniyor…</span>
+          </div>
+
+          <div id="discoverEmpty" class="hidden flex flex-col items-center justify-center py-16 text-center space-y-2">
+            <svg class="w-10 h-10 text-slate-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-xs text-slate-400 font-medium">Aramanıza uygun anime bulunamadı.</p>
+            <button id="btnEmptyReset" type="button" class="text-xs text-brand-400 hover:text-brand-300 underline">Trend animelere dön</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sağ: oynatıcı + kaynak listesi -->
+    <aside id="sideArea" class="w-[460px] shrink-0 border-l border-slate-800 overflow-y-auto p-3 flex flex-col gap-3">
+
+      <div class="relative w-full shrink-0 bg-black rounded-xl overflow-hidden shadow-2xl border border-slate-800 aspect-video group player-container" id="playerContainer" style="aspect-ratio: 16 / 9; max-height: calc(100vh - 230px); max-width: calc((100vh - 230px) * (16 / 9)); margin: 0 auto;">
+        <video id="videoElement" class="w-full h-full object-contain bg-black cursor-pointer transition-all duration-200" playsinline></video>
+
+        <!-- Ayrı Pencere Oynatılıyor Bildirim Katmanı -->
+        <div id="detachedOverlay" class="absolute inset-0 z-30 hidden bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
+          <div class="p-3 bg-brand-950 border border-brand-800 rounded-full text-brand-400">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          </div>
+          <h3 class="text-sm font-semibold text-white">Video Ayrı Pencerede Oynatılıyor</h3>
+          <p class="text-xs text-slate-400 max-w-xs leading-relaxed">Video bağımsız masaüstü penceresinde devam ediyor. Ana uygulamaya geri dönmek için butona basın.</p>
+          <button id="btnReturnFromDetached" type="button" class="bg-brand-600 hover:bg-brand-500 text-white font-medium px-3.5 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-lg shadow-brand-500/20">
+            <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
+            <span>Ana Pencereye Geri Al (Windowed)</span>
+          </button>
+        </div>
+
+        <div id="playerToast" class="absolute top-3 left-3 z-30 hidden bg-slate-900/90 border border-slate-700 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg backdrop-blur"></div>
+
+        <!-- Akıllı İntroyu Atla Yüzen Rozeti (Sleek Floating Badge) -->
+        <button id="btnFloatingSkipIntro" type="button" class="absolute top-3 right-3 z-30 hidden bg-brand-600/90 hover:bg-brand-500 text-white font-medium text-xs px-3 py-1.5 rounded-lg shadow-xl backdrop-blur transition-all flex items-center gap-1.5">
+          <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+          <span id="floatingSkipIntroText">İntroyu Atla (+85s)</span>
+          <span id="floatingSkipIntroBadge" class="hidden text-[10px] bg-black/40 text-brand-200 px-1 py-0.2 rounded font-mono">AniSkip</span>
+        </button>
+
+        <!-- Akıllı Outroyu Atla / Sonraki Bölüm Rozeti -->
+        <button id="btnFloatingSkipOutro" type="button" class="absolute top-12 right-3 z-30 hidden bg-slate-800/90 hover:bg-slate-700 text-brand-300 font-medium text-xs px-3 py-1.5 rounded-lg border border-slate-700 shadow-xl backdrop-blur transition-all flex items-center gap-1.5">
+          <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <span id="floatingSkipOutroText">Outroyu Atla / Sonraki Bölüm</span>
+        </button>
+
+        <!-- Otomatik Sonraki Bölüm Geri Sayım Kartı -->
+        <div id="nextEpisodeOverlay" class="absolute inset-0 bg-black/85 z-30 hidden flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+          <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div class="w-12 h-12 rounded-full bg-brand-600/20 text-brand-400 mx-auto flex items-center justify-center">
+              <svg class="icon-lg text-brand-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-white">Bölüm Tamamlandı</h4>
+              <p id="nextEpisodeCountdownText" class="text-xs text-slate-400 mt-1">5 saniye içinde sonraki bölüme geçiliyor…</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btnCancelNextEp" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors">İptal</button>
+              <button id="btnProceedNextEp" type="button" class="flex-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors">Hemen Geç</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="centerPlayOverlay" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10 transition-opacity duration-200 opacity-0">
+          <div class="p-4 bg-brand-600/80 rounded-full text-white backdrop-blur shadow-2xl transform scale-110">
+            <svg class="icon-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+
+        <!-- Oynatıcı Kontrolleri (Modern, Sade ve Ferah Tasarım) -->
+        <div class="player-controls absolute inset-x-0 bottom-0 z-20 flex flex-col p-2 transition-all duration-300">
+          <!-- İlerleme ve Tampon Barı -->
+          <div class="relative w-full flex items-center mb-1">
+            <div id="bufferBar" class="absolute left-0 top-0 bottom-0 bg-slate-600/40 rounded pointer-events-none transition-all duration-300" style="width: 0%;"></div>
+            <input type="range" id="progressBar" min="0" max="100" step="0.1" value="0" aria-label="İlerleme" class="relative z-10 w-full progress-range">
+          </div>
+
+          <!-- Ana Kontrol Çubuğu -->
+          <div class="flex items-center justify-between text-xs text-slate-200 gap-1">
+            <!-- Sol Grup: Oynat, Önceki, Sonraki, -10s, +10s, Ses, Süre -->
+            <div class="flex items-center gap-0.5">
+              <button id="btnPlayPause" type="button" class="ctrl-btn ctrl-btn-primary" title="Oynat / Duraklat (Boşluk)" aria-label="Oynat / Duraklat">
+                <svg id="iconPlay" class="icon-md" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg id="iconPause" class="icon-md hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+
+              <button id="btnPrevEpisode" type="button" class="ctrl-btn" title="Önceki Bölüm (P)" aria-label="Önceki Bölüm">
+                <svg class="icon-sm" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+              </button>
+
+              <button id="btnNextEpisode" type="button" class="ctrl-btn" title="Sonraki Bölüm (N)" aria-label="Sonraki Bölüm">
+                <svg class="icon-sm" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+              </button>
+
+              <button id="btnRewind10" type="button" class="ctrl-btn" title="10 sn Geri (Sol Yön Tuşu)" aria-label="10 saniye geri">
+                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"/></svg>
+              </button>
+
+              <button id="btnForward10" type="button" class="ctrl-btn" title="10 sn İleri (Sağ Yön Tuşu)" aria-label="10 saniye ileri">
+                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z"/></svg>
+              </button>
+
+              <div class="flex items-center gap-0.5 pl-0.5">
+                <button id="btnMute" type="button" class="ctrl-btn" title="Sesi Aç / Kapat (M)" aria-label="Sessiz">
+                  <svg id="iconVolHigh" class="icon-sm" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                  <svg id="iconVolMuted" class="icon-sm hidden text-red-400" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                </button>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" aria-label="Ses" class="w-8 h-1 bg-slate-700 rounded appearance-none cursor-pointer accent-brand-500">
+              </div>
+
+              <span id="timeDisplay" class="font-mono text-slate-300 pl-0.5 text-[10px] whitespace-nowrap">00:00 / 00:00</span>
+            </div>
+
+            <!-- Sağ Grup: Favori, İndir, Hızlı Ayarlar Dişlisi, Görüntüleme Modu -->
+            <div class="flex items-center gap-0.5">
+              <!-- Favorilere Ekle / Çıkar -->
+              <button id="btnToggleBookmark" type="button" class="ctrl-btn" title="Favorilere Ekle / Çıkar" aria-label="Favori">
+                <svg id="iconBookmarkOutline" class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                <svg id="iconBookmarkFilled" class="icon-sm text-amber-400 fill-current hidden" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+              </button>
+
+              <!-- MP4 Olarak İndir (Çevrimdışı İzleme) -->
+              <button id="btnDownloadStream" type="button" class="ctrl-btn" title="Bölümü MP4 Olarak İndir (Çevrimdışı İzleme)" aria-label="İndir">
+                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              </button>
+
+              <!-- Altyazı Kontrolleri -->
+              <div class="relative">
+                <button id="btnSubtitles" type="button" class="ctrl-btn" title="Altyazı Ayarları (C)" aria-label="Altyazı Ayarları">
+                  <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                </button>
+
+                <!-- Altyazı Açılır Menüsü -->
+                <div id="subtitlesMenu" class="hidden absolute bottom-11 right-1 z-50 bg-slate-900/95 border border-slate-700 rounded-xl shadow-2xl p-2.5 w-64 text-xs text-slate-200 backdrop-blur-md space-y-2.5 max-h-[260px] overflow-y-auto no-scrollbar">
+                  <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+                    <span class="font-bold text-slate-200 flex items-center gap-1.5 text-[11px]">
+                      <svg class="icon-xs text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                      <span>Altyazı Ayarları</span>
+                    </span>
+                    <button id="btnCloseSubtitlesMenu" type="button" class="text-slate-400 hover:text-white p-0.5 rounded transition-colors" title="Kapat">
+                      <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+
+                  <!-- Altyazı Parçası Seçici -->
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-slate-400 text-[11px]">Altyazı</span>
+                    <select id="subtitleTrackSelect" class="ctrl-select max-w-[140px] truncate text-[11px]" title="Altyazı Parçası">
+                      <option value="off" selected>Kapalı</option>
+                    </select>
+                  </div>
+
+                  <!-- Dosyadan Yükle Butonu & Gizli Input -->
+                  <div>
+                    <input type="file" id="subtitleFileInput" accept=".srt,.vtt,.txt" class="hidden">
+                    <button id="btnUploadSubtitleFile" type="button" class="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-center text-slate-200 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors">
+                      <svg class="icon-xs text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                      <span>Altyazı Yükle (.srt, .vtt)</span>
+                    </button>
+                    <p class="text-[9px] text-slate-400 mt-1 text-center">Dosyayı doğrudan videoya da sürükleyebilirsiniz</p>
+                  </div>
+
+                  <!-- Senkronizasyon (Offset) -->
+                  <div class="pt-1 border-t border-slate-800/80">
+                    <div class="flex items-center justify-between text-[11px] mb-1">
+                      <span class="text-slate-400">Senkron Kaydırma</span>
+                      <span id="subtitleOffsetDisplay" class="font-mono text-brand-300 text-[10px]">0.0 sn</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1">
+                      <button id="btnSubSyncMinus" type="button" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-mono text-[10px] text-center border border-slate-700">-0.5s</button>
+                      <button id="btnSubSyncReset" type="button" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-mono text-[10px] text-center border border-slate-700">Sıfırla</button>
+                      <button id="btnSubSyncPlus" type="button" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-mono text-[10px] text-center border border-slate-700">+0.5s</button>
+                    </div>
+                  </div>
+
+                  <!-- Boyut Seçimi -->
+                  <div class="flex items-center justify-between gap-1 pt-1 border-t border-slate-800/80">
+                    <span class="text-slate-400 text-[11px]">Yazı Boyutu</span>
+                    <select id="subtitleSizeSelect" class="ctrl-select text-[11px]" title="Altyazı Boyutu">
+                      <option value="sm">Küçük</option>
+                      <option value="md" selected>Normal</option>
+                      <option value="lg">Büyük</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hızlı Oynatıcı Ayarları Dişli Butonu -->
+              <div class="relative">
+                <button id="btnPlayerQuickSettings" type="button" class="ctrl-btn" title="Oynatıcı Ayarları (Kalite, Hız, Ses)" aria-label="Oynatıcı Ayarları">
+                  <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </button>
+
+                <!-- Modern Oynatıcı Ayarları Açılır Paneli (YouTube Stili - Kompakt ve Tam Uyumlu) -->
+                <div id="playerQuickSettingsMenu" class="hidden absolute bottom-11 right-1 z-50 bg-slate-900/95 border border-slate-700 rounded-xl shadow-2xl p-2.5 w-60 text-xs text-slate-200 backdrop-blur-md space-y-2 max-h-[250px] overflow-y-auto no-scrollbar">
+                  <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+                    <span class="font-bold text-slate-200 flex items-center gap-1.5 text-[11px]">
+                      <svg class="icon-xs text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                      <span>Oynatıcı Ayarları</span>
+                    </span>
+                    <button id="btnCloseQuickSettings" type="button" class="text-slate-400 hover:text-white p-0.5 rounded transition-colors" title="Kapat">
+                      <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+
+                  <!-- Kalite Seçimi -->
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-slate-400 text-[11px]">Kalite</span>
+                    <select id="qualitySelector" class="ctrl-select max-w-[130px] truncate text-[11px]" title="Çözünürlük Kalitesi">
+                      <option value="-1">Kalite: Otomatik</option>
+                    </select>
+                  </div>
+
+                  <!-- Oynatma Hızı -->
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-slate-400 text-[11px]">Hız ([ / ])</span>
+                    <select id="speedSelector" class="ctrl-select text-[11px]" title="Oynatma Hızı">
+                      <option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="0.75">0.75x</option>
+                      <option value="1" selected>1.0x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option>
+                      <option value="1.75">1.75x</option><option value="2">2.0x</option><option value="2.5">2.5x</option><option value="3">3.0x</option>
+                    </select>
+                  </div>
+
+                  <!-- Ses Güçlendirme (Audio Boost) -->
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-slate-400 text-[11px]">Ses Artırıcı</span>
+                    <select id="audioBoostSelector" class="ctrl-select text-[11px]" title="Ses Yükseltici">
+                      <option value="100" selected>%100</option>
+                      <option value="150">%150</option>
+                      <option value="200">%200</option>
+                      <option value="250">%250</option>
+                      <option value="300">%300</option>
+                    </select>
+                  </div>
+
+                  <!-- Görüntü İyileştirici / Restorasyon (Deblock + True HD) -->
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-slate-400 text-[11px]">Restorasyon (V)</span>
+                    <select id="videoEnhanceSelector" class="ctrl-select max-w-[130px] truncate text-[11px]" title="Eski Anime Çizgi & Piksel Restorasyonu">
+                      <option value="none" selected>Kapalı (Orijinal)</option>
+                      <option value="anime-hd">Anime HD (Çizgi Kurtarma)</option>
+                      <option value="anime-smooth">Pürüzsüz (Pikselleri Erit)</option>
+                      <option value="anime-vivid">Canlı Renk & Derin Siyah</option>
+                      <option value="anime-ultra">Ultra Restorasyon (Eski Anime)</option>
+                    </select>
+                  </div>
+
+                  <!-- En-Boy Oranı (Aspect Ratio) -->
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-slate-400 text-[11px]">En-Boy (A)</span>
+                    <select id="aspectRatioSelector" class="ctrl-select max-w-[130px] truncate text-[11px]" title="En-Boy Oranı">
+                      <option value="auto" selected>Otomatik (Orijinal)</option>
+                      <option value="16-9">16:9 Geniş Ekran</option>
+                      <option value="4-3">4:3 Klasik TV</option>
+                      <option value="cover">16:9 Doldur (Siyah Barsız)</option>
+                    </select>
+                  </div>
+
+                  <!-- Görüntü Sığdırma -->
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-slate-400 text-[11px]">Sığdırma</span>
+                    <select id="fitSelector" class="ctrl-select text-[11px]" title="Görüntü Sığdırma Modu">
+                      <option value="contain" selected>Sığdır</option>
+                      <option value="cover">Doldur</option>
+                      <option value="fill">Esnet</option>
+                    </select>
+                  </div>
+
+                  <!-- Tüm Ayarları Aç -->
+                  <div class="pt-1 border-t border-slate-800 text-center">
+                    <button id="btnPlayerOpenFullSettings" type="button" class="text-[10px] text-brand-400 hover:text-brand-300 underline">
+                      Tüm Ayarlar ve Tercihler…
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Görüntüleme Modları Menüsü -->
+              <div class="relative">
+                <button id="btnFullscreen" type="button" class="ctrl-btn" title="Görüntüleme Modları" aria-label="Görüntüleme modları menüsü">
+                  <svg id="iconEnterFs" class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4h-4"/></svg>
+                  <svg id="iconExitFs" class="icon-sm hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </button>
+                <div id="displayModeMenu" class="hidden absolute bottom-11 right-1 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1.5 w-44 text-xs text-slate-200 backdrop-blur-md max-h-[160px] overflow-y-auto no-scrollbar">
+                  <div class="px-3 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-500 border-b border-slate-800">Görüntüleme Modu</div>
+                  <button id="modeFullscreen" type="button" class="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors">
+                    <span class="flex items-center gap-2">
+                      <svg class="icon-sm text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4h-4"/></svg>
+                      <span>Fullscreen</span>
+                    </span>
+                    <span id="checkFullscreen" class="mode-check hidden text-brand-400"><svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>
+                  </button>
+                  <button id="modeInWindow" type="button" class="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors">
+                    <span class="flex items-center gap-2">
+                      <svg class="icon-sm text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2zm4 4h10"/></svg>
+                      <span>In Window</span>
+                    </span>
+                    <span id="checkInWindow" class="mode-check hidden text-brand-400"><svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>
+                  </button>
+                  <button id="modePiP" type="button" class="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors">
+                    <span class="flex items-center gap-2">
+                      <svg class="icon-sm text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                      <span>PiP</span>
+                    </span>
+                    <span id="checkPiP" class="mode-check hidden text-brand-400"><svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <h2 id="currentVideoTitle" class="font-semibold text-sm text-white truncate">Henüz bir kaynak oynatılmıyor</h2>
+            <p id="currentStreamInfo" class="text-xs text-slate-400 mt-0.5">Kaynak algılamayı başlatın, sayfada çeviri/oynatıcıyı seçin, ardından listeden bir kaynak seçin.</p>
+          </div>
+          <button id="btnFind1080p" type="button" class="shrink-0 bg-brand-600/90 hover:bg-brand-500 text-white font-medium text-xs px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 transition-all" title="Düşük kaliteli yayın yerine bu bölümün 1080p / Remastered alternatiflerini bul">
+            <svg class="icon-xs text-amber-300" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <span>1080p HD Bul</span>
+          </button>
+        </div>
+        <!-- 1080p Hızlı Alternatif Kaynaklar Açılır Menüsü -->
+        <div id="quick1080pMenu" class="hidden bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex flex-col gap-2 text-xs shadow-xl animate-fade-in">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800/80 pb-1.5">
+            <span class="font-medium text-slate-300">🌟 1080p Remaster / HD Kaynaklar</span>
+            <span class="text-[10px] text-brand-400">Tek tıkla ara</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button id="btnAltWeb1080p" type="button" class="bg-slate-800/90 hover:bg-brand-600 hover:text-white text-slate-200 px-2.5 py-1.5 rounded-md text-left truncate flex items-center gap-1.5 transition-colors" title="Web genelinde 1080p Remaster Türkçe altyazı ara">
+              <span class="text-amber-400 font-bold">★</span> <span>Web 1080p Ara</span>
+            </button>
+            <button id="btnAltAnimecix" type="button" class="bg-slate-800/90 hover:bg-brand-600 hover:text-white text-slate-200 px-2.5 py-1.5 rounded-md text-left truncate flex items-center gap-1.5 transition-colors" title="Animecix üzerinde 1080p Blu-ray ara">
+              <span class="text-sky-400 font-bold">🎬</span> <span>Animecix (1080p)</span>
+            </button>
+            <button id="btnAltTurkanime" type="button" class="bg-slate-800/90 hover:bg-brand-600 hover:text-white text-slate-200 px-2.5 py-1.5 rounded-md text-left truncate flex items-center gap-1.5 transition-colors" title="TürkAnime üzerinde çoklu Fansub ve HD kaynakları ara">
+              <span class="text-emerald-400 font-bold">⚡</span> <span>TürkAnime (Fansub)</span>
+            </button>
+            <button id="btnAltDizigom" type="button" class="bg-slate-800/90 hover:bg-brand-600 hover:text-white text-slate-200 px-2.5 py-1.5 rounded-md text-left truncate flex items-center gap-1.5 transition-colors" title="Dizigom üzerinde HD kaynak ara">
+              <span class="text-indigo-400 font-bold">📺</span> <span>Dizigom (HD)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Yan Panel Sekmeleri (Simgeler ve Metin) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col flex-1 min-h-[300px]">
+        <div class="flex items-center border-b border-slate-800 bg-slate-950/70 text-xs">
+          <button id="tabBtnStreams" type="button" class="flex-1 py-2 px-2 font-semibold text-center border-b-2 border-brand-500 text-white bg-slate-900/60 transition-colors flex items-center justify-center gap-1.5" title="Medya Kaynakları">
+            <svg class="icon-sm text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>Kaynaklar</span>
+            <span id="streamCountBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400">0</span>
+          </button>
+          <button id="tabBtnBookmarks" type="button" class="flex-1 py-2 px-2 font-medium text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5" title="İzleme Listesi / Favoriler">
+            <svg class="icon-sm text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+            <span>Favoriler</span>
+            <span id="bookmarkCountBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400">0</span>
+          </button>
+          <button id="tabBtnDownloads" type="button" class="flex-1 py-2 px-2 font-medium text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5" title="İndirilen Videolar">
+            <svg class="icon-sm text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>İndirilenler</span>
+            <span id="downloadCountBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400">0</span>
+          </button>
+          <button id="tabBtnPopups" type="button" class="py-2 px-2.5 font-medium text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors" title="Engellenen Açılır Pencereler">
+            <svg class="icon-sm text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </button>
+        </div>
+
+        <!-- Sekme 1: Kaynaklar -->
+        <div id="tabContentStreams" class="p-3 flex flex-col gap-2 flex-1">
+          <p id="captureStatus" class="text-[11px] text-slate-400">Kaynak algılama kapalı.</p>
+          <div id="streamsList" class="space-y-2 overflow-y-auto max-h-[250px] pr-1 flex-1"></div>
+          <p id="activityStatus" class="text-[10px] text-slate-500 border-t border-slate-800 pt-2">Ağ etkinliği: —</p>
+        </div>
+
+        <!-- Sekme 2: Favoriler (Bookmarks / Watchlist) -->
+        <div id="tabContentBookmarks" class="p-3 flex flex-col gap-2 flex-1 hidden">
+          <input id="bookmarkSearchInput" type="text" placeholder="Favorilerde ara..."
+            class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none">
+          <div id="bookmarksList" class="space-y-2 overflow-y-auto max-h-[250px] pr-1 flex-1"></div>
+          <p id="bookmarksEmpty" class="text-[11px] text-slate-500 italic py-4 text-center">Henüz favorilere eklenmiş bir içerik yok. Oynatıcıdaki favori (yıldız) simgesine basarak ekleyebilirsiniz.</p>
+        </div>
+
+        <!-- Sekme 3: İndirilenler (Downloads & Offline) -->
+        <div id="tabContentDownloads" class="p-3 flex flex-col gap-2 flex-1 hidden">
+          <div class="flex items-center justify-between text-xs text-slate-400 pb-1 border-b border-slate-800">
+            <span>Çevrimdışı Bölümler</span>
+            <span class="text-[10px] text-emerald-400 font-medium">İnternetsiz İzleme</span>
+          </div>
+          <div id="downloadsList" class="space-y-2 overflow-y-auto max-h-[250px] pr-1 flex-1"></div>
+          <p id="downloadsEmpty" class="text-[11px] text-slate-500 italic py-4 text-center">İndirilen video bulunmuyor. Oynatıcıdaki indirme simgesine basarak bölümü MP4 olarak indirebilirsiniz.</p>
+        </div>
+
+        <!-- Sekme 4: Engellenen Pencereler -->
+        <div id="tabContentPopups" class="p-3 flex flex-col gap-2 flex-1 hidden">
+          <h4 class="text-xs font-medium text-slate-300 mb-1">Engellenen yeni pencereler</h4>
+          <div id="popupList" class="space-y-1 max-h-[220px] overflow-y-auto"></div>
+          <p id="popupEmpty" class="text-[11px] text-slate-500 italic py-4 text-center">Yok.</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-400">
+        <span class="font-semibold text-slate-300">Kısayollar:</span>
+        <span><kbd class="px-1 bg-slate-800 border border-slate-700 rounded">Space</kbd> Oynat</span>
+        <span><kbd class="px-1 bg-slate-800 border border-slate-700 rounded">S</kbd> İntro</span>
+        <span><kbd class="px-1 bg-slate-800 border border-slate-700 rounded">N</kbd>/<kbd class="px-1 bg-slate-800 border border-slate-700 rounded">P</kbd> Bölüm</span>
+        <span><kbd class="px-1 bg-slate-800 border border-slate-700 rounded">[</kbd>/<kbd class="px-1 bg-slate-800 border border-slate-700 rounded">]</kbd> Hız</span>
+        <span><kbd class="px-1 bg-slate-800 border border-slate-700 rounded">F</kbd> Tam ekran</span>
+        <span><kbd class="px-1 bg-slate-800 border border-slate-700 rounded">M</kbd> Sessiz</span>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Alt İzleme Geçmişi Paneli -->
+  <section id="historySection" class="border-t border-slate-800 bg-slate-900/95 shrink-0 transition-all duration-200 flex flex-col z-20">
+    <!-- Başlık, Arama ve Filtre Çubuğu -->
+    <div class="px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-900">
+      <div class="flex items-center gap-2">
+        <button id="btnToggleHistory" type="button" class="ctrl-btn w-6 h-6 min-w-[24px] min-h-[24px] text-slate-400 hover:text-white" title="Paneli Genişlet/Daralt">
+          <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <span class="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer" id="historyTitleHeader">
+          <span>İzleme Geçmişi</span>
+          <span id="historyCountBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 font-mono">0</span>
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2 flex-1 max-w-sm mx-2">
+        <input id="historySearchInput" type="text" placeholder="Geçmişte ara (başlık, bölüm, kaynak)..."
+          class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none">
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="flex rounded overflow-hidden border border-slate-700 text-[11px]" role="group">
+          <button id="filterAll" type="button" class="px-2 py-0.5 bg-brand-600 text-white font-medium">Tümü</button>
+          <button id="filterInProgress" type="button" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300">Yarım</button>
+          <button id="filterCompleted" type="button" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300">Biten</button>
+        </div>
+        <button id="btnClearHistory" type="button" class="text-[11px] text-red-400 hover:text-red-300 hover:bg-red-950/60 border border-red-900/50 px-2 py-0.5 rounded transition-colors" title="Tüm izleme geçmişini sil">Geçmişi Temizle</button>
+      </div>
+    </div>
+
+    <!-- Geçmiş Kartları Listesi -->
+    <div id="historyContent" class="overflow-x-auto p-2 no-scrollbar">
+      <div id="historyList" class="flex gap-3"></div>
+      <div id="historyEmpty" class="hidden flex items-center justify-center py-5 text-slate-500 text-xs w-full italic">
+        Henüz izleme geçmişi yok. Bir video izlemeye başladığınızda burada listelenecek.
+      </div>
+    </div>
+  </section>
+
+  <!-- Ayarlar Modalı -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden text-slate-200">
+      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+          <svg class="icon-sm text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Uygulama ve Oturum Ayarları</span>
+        </h3>
+        <button id="btnCloseSettings" type="button" class="text-slate-400 hover:text-white p-1 rounded transition-colors" title="Kapat">
+          <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4 text-xs max-h-[75vh] overflow-y-auto">
+        <!-- Video ve Oynatıcı Tercihleri -->
+        <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg space-y-3">
+          <h4 class="font-bold text-slate-200 flex items-center gap-1.5 text-xs text-brand-400">
+            <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <span>Video ve Oynatıcı Tercihleri</span>
+          </h4>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1" for="settingDefaultQuality">Varsayılan Video Kalitesi:</label>
+              <select id="settingDefaultQuality" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded px-2.5 py-1.5 focus:border-brand-500 focus:outline-none">
+                <option value="auto">Otomatik (HLS Adaptif)</option>
+                <option value="highest">En Yüksek Kalite (1080p / 720p)</option>
+                <option value="lowest">En Düşük Kalite (Veri Tasarrufu)</option>
+                <option value="1080">Öncelikli 1080p</option>
+                <option value="720">Öncelikli 720p</option>
+                <option value="480">Öncelikli 480p</option>
+                <option value="360">Öncelikli 360p</option>
+              </select>
+              <p class="text-[10px] text-slate-500 mt-1">Yeni video açıldığında tercih edilen kalite otomatik olarak devreye girer.</p>
+            </div>
+
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1" for="settingDefaultSpeed">Varsayılan Oynatma Hızı:</label>
+              <select id="settingDefaultSpeed" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded px-2.5 py-1.5 focus:border-brand-500 focus:outline-none">
+                <option value="0.75">0.75x</option>
+                <option value="1">1.0x (Normal)</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="1.75">1.75x</option>
+                <option value="2">2.0x</option>
+              </select>
+              <p class="text-[10px] text-slate-500 mt-1">Videolar başladığında uygulanacak varsayılan hız.</p>
+            </div>
+
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1" for="settingSeekStep">İleri / Geri Atlama Süresi:</label>
+              <select id="settingSeekStep" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded px-2.5 py-1.5 focus:border-brand-500 focus:outline-none">
+                <option value="5">5 saniye</option>
+                <option value="10">10 saniye (Varsayılan)</option>
+                <option value="15">15 saniye</option>
+                <option value="30">30 saniye</option>
+              </select>
+              <p class="text-[10px] text-slate-500 mt-1">Klavye ok tuşları ve sarma butonlarının atlama miktarı.</p>
+            </div>
+
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1" for="settingDefaultLayout">Başlangıç Görünümü:</label>
+              <select id="settingDefaultLayout" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded px-2.5 py-1.5 focus:border-brand-500 focus:outline-none">
+                <option value="discover" selected>Keşfet (Trend Animeler & Arama)</option>
+                <option value="split">İkili Mod (Tarayıcı + Oynatıcı)</option>
+                <option value="player">Yalnızca Oynatıcı Modu</option>
+              </select>
+              <p class="text-[10px] text-slate-500 mt-1">Uygulama açılışında tercih edilen ekran yerleşimi.</p>
+            </div>
+
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1" for="settingIntroSkip">İntro Atlama Süresi:</label>
+              <select id="settingIntroSkip" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded px-2.5 py-1.5 focus:border-brand-500 focus:outline-none">
+                <option value="60">60 saniye (1 dk)</option>
+                <option value="85" selected>85 saniye (Standart Anime)</option>
+                <option value="90">90 saniye (1.5 dk)</option>
+                <option value="120">120 saniye (2 dk)</option>
+              </select>
+              <p class="text-[10px] text-slate-500 mt-1">Kısayol (S) ve oynatıcı butonunun atlayacağı süre.</p>
+            </div>
+
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1" for="settingBufferMode">Gelişmiş Tamponlama (Smart Buffer):</label>
+              <select id="settingBufferMode" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded px-2.5 py-1.5 focus:border-brand-500 focus:outline-none">
+                <option value="normal">Normal (30 sn / 60 MB)</option>
+                <option value="balanced" selected>Dengeli (60 sn / 120 MB)</option>
+                <option value="aggressive">Agresif / Kesintisiz (180 sn / 250 MB)</option>
+              </select>
+              <p class="text-[10px] text-slate-500 mt-1">Yavaş internetlerde donmayı önlemek için önbellek boyutu.</p>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2 border-t border-slate-800/80">
+            <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+              <input id="settingSmartIntroDetection" type="checkbox" class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0 focus:ring-offset-0">
+              <span>Akıllı İntro / Outro Algılama (AniSkip + Yerel Ses Parmak İzi)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+              <input id="settingAutoSkipIntro" type="checkbox" class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0 focus:ring-offset-0">
+              <span>İntro başladığında otomatik atla (Butona tıklama gerektirmez)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+              <input id="settingAutoNextEpisode" type="checkbox" class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0 focus:ring-offset-0">
+              <span>Video bittiğinde otomatik sonraki bölüme geç (5 sn geri sayım)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+              <input id="settingAutoplay" type="checkbox" class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0 focus:ring-offset-0">
+              <span>Kaynak seçildiğinde otomatik oynat</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+              <input id="settingRememberVolume" type="checkbox" class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0 focus:ring-offset-0">
+              <span>Son kullanılan ses seviyesini ve sessiz durumunu hatırla</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+              <input id="settingRememberWindow" type="checkbox" class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0 focus:ring-offset-0">
+              <span>Uygulama penceresinin boyutunu, konumunu ve tam ekran durumunu hatırla</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+              <input id="settingRestoreLastPage" type="checkbox" class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0 focus:ring-offset-0">
+              <span>Başlangıçta son açık olan web sayfasını geri yükle</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Oturum Bilgisi -->
+        <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-slate-200">Gömülü Web Oturumu:</span>
+            <span id="sessionStatusBadge" class="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-mono text-[10px]">persist:mk-player-browser</span>
+          </div>
+          <p class="text-slate-400 text-[11px] leading-relaxed">
+            Gömülü Chromium tarayıcısında açtığınız hesaplar ve çerezler bu oturumda kalıcı olarak saklanır. Uygulama kapandığında oturumunuz kaybolmaz.
+          </p>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button id="btnSettingsClearSite" type="button" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700">Mevcut Sitenin Verilerini Temizle</button>
+            <button id="btnSettingsClearAll" type="button" class="px-2.5 py-1.5 bg-amber-950/80 hover:bg-amber-900 text-amber-200 rounded border border-amber-800">Tüm Web Oturumunu Sıfırla</button>
+          </div>
+        </div>
+
+        <!-- Geçmiş Bilgisi -->
+        <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-slate-200">İzleme Geçmişi:</span>
+            <div class="flex items-center gap-2">
+              <span id="settingsEncryptionBadge" class="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-400 font-mono text-[10px]">Şifreli Depolama</span>
+              <span id="settingsHistoryCount" class="text-slate-400 font-mono">0 kayıt</span>
+            </div>
+          </div>
+          <p class="text-slate-400 text-[11px] leading-relaxed">
+            İzleme geçmişi verileriniz ayrı bir yerel dosyada şifreli olarak tutulur. Web oturumunu veya çerezleri temizlemek geçmişinizi silmez.
+          </p>
+          <div class="pt-1">
+            <button id="btnSettingsClearHistory" type="button" class="px-2.5 py-1.5 bg-red-950/80 hover:bg-red-900 text-red-200 rounded border border-red-800">Tüm İzleme Geçmişini Sil</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-4 py-2.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
+        <button id="btnResetSettings" type="button" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 transition-colors">Varsayılanlara Sıfırla</button>
+        <button id="btnDismissSettings" type="button" class="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded text-xs transition-colors">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Klavye Kısayolları Modalı -->
+  <div id="shortcutsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden text-slate-200 flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+          <span class="p-1 rounded bg-brand-950 text-brand-400 border border-brand-800">
+            <kbd class="font-mono text-xs font-bold">?</kbd>
+          </span>
+          <span>Klavye Kısayolları</span>
+        </h3>
+        <button id="btnCloseShortcutsModal" type="button" class="text-slate-400 hover:text-white p-1 rounded transition-colors" title="Kapat">
+          <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-4 text-xs max-h-[70vh] overflow-y-auto">
+        <div>
+          <h4 class="text-slate-400 uppercase tracking-wider font-semibold text-[10px] mb-2">Oynatıcı Kontrolleri</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Oynat / Duraklat</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">Boşluk / K</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Tam Ekran</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">F</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">10 sn Geri</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">← / J</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">10 sn İleri</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">→ / L</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Ses Artır / Azalt</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">↑ / ↓</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Sesi Kapat / Aç</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">M</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Önceki Bölüm</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">P</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Sonraki Bölüm</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">N</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Intro / Outro Atla</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">S / Shift+S</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Hız Artır / Azalt</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">[ / ]</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Altyazı Aç / Kapat</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">C</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Görüntü İyileştirici</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">V</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">En-Boy Oranı (4:3 / 16:9)</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">A</kbd>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-slate-400 uppercase tracking-wider font-semibold text-[10px] mb-2">Navigasyon & Genel</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Kısayollar Kılavuzu</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">?</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">PiP Modu</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">I</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Pencereleri Kapat</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">Esc</kbd>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800">
+              <span class="text-slate-300">Normal Hıza Dön</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[10px]">\</kbd>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-5 py-3 bg-slate-950 border-t border-slate-800 flex justify-end">
+        <button id="btnShortcutsOk" type="button" class="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded font-medium text-xs transition-colors">Anladım</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anime Detay ve Bölüm Seçme Modalı (Episode Picker) -->
+  <div id="animeDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+    <div id="animeDetailModalCard" class="anime-modal-card bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden text-slate-200 flex flex-col" style="max-height: 85vh; height: 85vh;">
+      <!-- Modal Üst Alan (Afiş, Başlık, Bilgiler) -->
+      <div class="relative p-4 sm:p-5 border-b border-slate-800 flex gap-4 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-900 shrink-0">
+        <img id="modalAnimeCover" src="" alt="Cover" class="w-24 sm:w-28 h-36 sm:h-40 object-cover rounded-xl shadow-lg border border-slate-700/60 shrink-0 bg-slate-800">
+        <div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <h3 id="modalAnimeTitle" class="font-bold text-base sm:text-lg text-white leading-tight">Anime Başlığı</h3>
+              <button id="btnCloseAnimeModal" type="button" class="text-slate-400 hover:text-white p-1 rounded transition-colors" title="Kapat">
+                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <p id="modalAnimeAltTitle" class="text-xs text-slate-400 italic mt-0.5 truncate">Romaji Başlık</p>
+            
+            <div class="flex flex-wrap items-center gap-1.5 mt-2 text-[11px]">
+              <span id="modalAnimeScore" class="px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800 text-amber-300 font-bold flex items-center gap-1">
+                <svg class="w-3 h-3 text-amber-400 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                <span id="modalScoreValue">8.5</span>
+              </span>
+              <span id="modalAnimeEpisodes" class="px-1.5 py-0.5 rounded bg-brand-950 border border-brand-800 text-brand-300 font-medium">24 Bölüm</span>
+              <span id="modalAnimeYear" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">2024</span>
+              <span id="modalAnimeStatus" class="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-[10px]">Tamamlandı</span>
+            </div>
+            
+            <p id="modalAnimeGenres" class="text-[11px] text-slate-400 mt-2 truncate">Aksiyon, Macera, Fantastik</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Orta Alan (Konu & Sağlayıcı Seçimi) -->
+      <div class="px-4 py-2.5 bg-slate-900 border-b border-slate-800 space-y-2 shrink-0">
+        <p id="modalAnimeSynopsis" class="text-xs text-slate-300 leading-relaxed max-h-14 overflow-y-auto no-scrollbar">Anime konusu burada yer alacak…</p>
+        
+        <div class="flex items-center justify-between pt-1 text-xs">
+          <label class="font-semibold text-slate-300 flex items-center gap-1.5 text-[11px]" for="modalProviderSelect">
+            <svg class="icon-xs text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <span>İzleme Kaynağı (Sağlayıcı):</span>
+          </label>
+          <select id="modalProviderSelect" class="bg-slate-950 border border-slate-700 text-slate-200 rounded px-2.5 py-1 text-xs outline-none focus:border-brand-500">
+            <option value="web_1080p" selected>🌟 1080p Remaster Ara (Önerilen)</option>
+            <option value="animecix">Animecix (1080p / HD Arama)</option>
+            <option value="turkanime">TürkAnime (Çoklu Fansub & HD)</option>
+            <option value="dizigom">Dizigom (HD Arama)</option>
+            <option value="anizm_direct">Anizm (Doğrudan Bölüm)</option>
+            <option value="anizm_search">Anizm (Arama)</option>
+            <option value="duckduckgo">Web Genel Arama</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Modal Alt Alan (Bölüm Seçimi & Butonlar Izgarası) -->
+      <div class="flex-1 min-h-0 flex flex-col bg-slate-950/60 overflow-hidden" style="flex: 1 1 0%; min-height: 0;">
+        <div class="px-4 py-2.5 shrink-0 flex items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-900/40">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+              <svg class="icon-xs text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+              <span>Bölüm Seçin</span>
+            </span>
+            <input id="modalEpisodeSearchInput" type="number" min="1" placeholder="Bölüm No…" class="w-24 bg-slate-950 border border-slate-700 focus:border-brand-500 rounded px-2 py-0.5 text-[11px] text-white placeholder-slate-500 outline-none" title="Hızlı bölüm arama veya atlama">
+          </div>
+          <div id="modalEpisodePageTabs" class="flex items-center gap-1 overflow-x-auto no-scrollbar text-[11px] py-0.5"></div>
+        </div>
+
+        <!-- Bölüm Butonları Kaydırma Alanı -->
+        <div id="modalEpisodeScrollArea" class="p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain" style="flex: 1 1 0%; min-height: 0; overflow-y: auto;">
+          <div id="modalEpisodeGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            <!-- Butonlar dinamik üretilecek -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/vendor/hls.min.js"></script>
+  <script src="/assets/js/classify.js"></script>
+  <script src="/assets/js/messages.js"></script>
+  <script src="/assets/js/discover.js"></script>
+  <script src="/assets/js/player.js"></script>
+  <script src="/assets/js/render.js"></script>
+  <script src="/assets/js/app.js"></script>
+</body>
+</html>

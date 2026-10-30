@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MK VideoPlayer - Ayrı Pencere</title>
+  <link rel="stylesheet" href="/assets/vendor/tailwind.css">
+  <style>
+    .player-controls { transition: opacity 0.3s ease-in-out; }
+    .player-container:hover .player-controls,
+    .player-container.controls-active .player-controls { opacity: 1; pointer-events: auto; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col font-sans antialiased overflow-hidden select-none">
+  <div class="relative bg-black flex-1 overflow-hidden group player-container" id="playerContainer">
+    <video id="videoElement" class="w-full h-full object-contain bg-black cursor-pointer" playsinline></video>
+
+    <!-- Bildirim Balonu -->
+    <div id="playerToast" class="absolute top-3 left-3 z-30 hidden bg-slate-900/90 border border-slate-700 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg backdrop-blur"></div>
+
+    <!-- Ortadaki Oynat/Durdur Simgesi -->
+    <div id="centerPlayOverlay" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10 transition-opacity duration-200 opacity-0">
+      <div class="p-4 bg-brand-600/80 rounded-full text-white backdrop-blur shadow-2xl transform scale-110">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+    </div>
+
+    <!-- Oynatıcı Kontrolleri -->
+    <div class="player-controls absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-3 z-20 flex flex-col space-y-2 opacity-0 pointer-events-none">
+      <div class="flex items-center space-x-3">
+        <input type="range" id="progressBar" min="0" max="100" step="0.1" value="0" aria-label="İlerleme" class="w-full progress-range">
+      </div>
+      <div class="flex items-center justify-between text-xs text-slate-200 pt-1 gap-2">
+        <div class="flex items-center space-x-3">
+          <button id="btnPlayPause" type="button" class="hover:text-brand-400 focus:outline-none transition-colors" title="Oynat / Duraklat">
+            <svg id="iconPlay" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="iconPause" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+          <button id="btnRewind10" type="button" class="hover:text-brand-400 focus:outline-none transition-colors" title="10 sn Geri">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"/></svg>
+          </button>
+          <button id="btnForward10" type="button" class="hover:text-brand-400 focus:outline-none transition-colors" title="10 sn İleri">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z"/></svg>
+          </button>
+          <div class="flex items-center space-x-2">
+            <button id="btnMute" type="button" class="hover:text-brand-400 focus:outline-none" title="Ses">
+              <svg id="iconVolHigh" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+              <svg id="iconVolMuted" class="w-5 h-5 hidden text-red-400" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+            </button>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" aria-label="Ses" class="w-14 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500">
+          </div>
+          <span id="timeDisplay" class="font-mono text-slate-300">00:00 / 00:00</span>
+        </div>
+
+        <div class="flex items-center space-x-2 relative">
+          <select id="speedSelector" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded px-1.5 py-1 text-xs cursor-pointer">
+            <option value="0.5">0.5x</option><option value="0.75">0.75x</option>
+            <option value="1" selected>1.0x</option><option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option><option value="2">2.0x</option>
+          </select>
+          <select id="qualitySelector" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded px-1.5 py-1 text-xs cursor-pointer">
+            <option value="-1">Otomatik</option>
+          </select>
+
+          <!-- Ana Ekrana Geri Dön Butonu -->
+          <button id="btnReturnToMain" type="button" class="bg-brand-600 hover:bg-brand-500 text-white font-medium px-2.5 py-1 rounded text-xs flex items-center gap-1.5 transition-colors" title="Ana Pencereye Dön (Windowed)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            <span>Ana Pencereye Dön</span>
+          </button>
+
+          <!-- 4 Seçenekli Mod Menü Düğmesi -->
+          <div class="relative">
+            <button id="btnFullscreenMenu" type="button" class="hover:text-brand-400 p-1 rounded hover:bg-slate-800 transition-colors" title="Görüntüleme Modları">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4h-4"/></svg>
+            </button>
+
+            <!-- Açılır Menü -->
+            <div id="displayModeMenu" class="hidden absolute bottom-10 right-0 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1.5 w-44 text-xs text-slate-200 backdrop-blur-md">
+              <div class="px-3 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-500 border-b border-slate-800">Mod Seçin</div>
+              <button id="optFullscreen" type="button" class="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4h-4"/></svg>
+                  <span>Fullscreen</span>
+                </span>
+                <span class="mode-check hidden text-brand-400"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>
+              </button>
+              <button id="optInWindow" type="button" class="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between bg-slate-800/60 font-semibold text-brand-300">
+                <span class="flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2zm4 4h10"/></svg>
+                  <span>In Window</span>
+                </span>
+                <span class="mode-check text-brand-400"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>
+              </button>
+              <button id="optWindowed" type="button" class="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
+                  <span>Windowed</span>
+                </span>
+                <span class="mode-check hidden text-brand-400"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>
+              </button>
+              <button id="optPiP" type="button" class="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                  <span>PiP</span>
+                </span>
+                <span class="mode-check hidden text-brand-400"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/vendor/hls.min.js"></script>
+  <script src="/assets/js/classify.js"></script>
+  <script src="/assets/js/player.js"></script>
+  <script src="/assets/js/detached-app.js"></script>
+</body>
+</html>

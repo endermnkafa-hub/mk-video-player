@@ -1,0 +1,24 @@
+{
+  "name": "mk-video-player",
+  "version": "2.0.0",
+  "description": "MK VideoPlayer - gömülü Chromium tarayıcı + özel HLS/MP4 oynatıcı",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "postinstall": "node scripts/copy-vendor.js",
+    "build:css": "tailwindcss -c tailwind.config.js -i frontend/css/input.css -o frontend/vendor/tailwind.css --minify",
+    "start": "electron .",
+    "test:js": "node --test \"test/js/*.test.js\"",
+    "test:py": "node scripts/run-pytest.js",
+    "test:e2e": "electron test/e2e/run.js",
+    "test": "npm run test:js && npm run test:py && npm run test:e2e"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "jsdom": "^26.0.0",
+    "tailwindcss": "^3.4.17"
+  },
+  "dependencies": {
+    "hls.js": "^1.5.20"
+  }
+}

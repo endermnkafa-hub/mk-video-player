@@ -1,0 +1,140 @@
+# ============================================================
+# MK VideoPlayer - .gitignore
+# Repoya gitmemesi gereken tüm geçici, kişisel ve derleme dosyaları
+# ============================================================
+
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Python sanal ortamları
+.venv/
+venv/
+env/
+ENV/
+
+# ==============================
+# Node.js / Electron
+# ==============================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Paketleme ve derleme çıktıları
+dist/
+release/
+out/
+artifacts/
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.zip
+*.tar.gz
+
+# ==============================
+# Medya Dosyaları (İndirilen ve Önbellek Akışları)
+# ==============================
+downloads/
+*.mp4
+*.mkv
+*.webm
+*.ts
+*.m4v
+*.mp3
+*.aac
+*.flv
+*.avi
+
+# ==============================
+# Yerel Kullanıcı Verileri, Ayarlar ve Önbellekler
+# ==============================
+watch_history.json
+settings.json
+bookmarks.json
+downloads.json
+anime_title_cache.json
+series_fingerprints.json
+*.json.tmp*
+.user-data/
+browser-profile/
+electron-profile/
+userData/
+mk-player-data/
+storage_state.json
+cookies.json
+cookies.txt
+playwright/.auth/
+
+# ==============================
+# Ortam Değişkenleri ve Gizli Bilgiler
+# ==============================
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+
+# ==============================
+# Loglar, Çökme Raporları ve Geçici Dosyalar
+# ==============================
+*.log
+logs/
+*.tmp
+*.bak
+*.swp
+*.swo
+*.pid
+Crashpad/
+GPUCache/
+Cache/
+Code Cache/
+
+# ==============================
+# IDE ve Editör Dosyaları
+# ==============================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.vs/
+
+# ==============================
+# İşletim Sistemi Dosyaları
+# ==============================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ==============================
+# Test Çıktıları
+# ==============================
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# ==============================
+# Kişisel ve Scratch / Asistan Dosyaları
+# ==============================
+scratch/
+send.bat
+.antigravity/
+.gemini/

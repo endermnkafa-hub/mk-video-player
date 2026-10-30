@@ -1,0 +1,227 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Kök pencere kaydırma çubuğunu ve gereksiz taşmaları tamamen engelle */
+html, body {
+  overflow: hidden !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Windows yerel beyaz kaydırma çubuğu yerine koyu modern ince kaydırma çubuğu */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(2, 6, 23, 0.4);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.7);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.9);
+}
+
+/* Sabit Vektörel İkon Boyutları (Tüm tarayıcılarda deterministik boyutlandırma) */
+svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.icon-xs, svg.icon-xs { width: 12px !important; height: 12px !important; min-width: 12px !important; min-height: 12px !important; }
+.icon-sm, svg.icon-sm { width: 15px !important; height: 15px !important; min-width: 15px !important; min-height: 15px !important; }
+.icon-md, svg.icon-md { width: 18px !important; height: 18px !important; min-width: 18px !important; min-height: 18px !important; }
+.icon-lg, svg.icon-lg { width: 22px !important; height: 22px !important; min-width: 22px !important; min-height: 22px !important; }
+
+/* SVG yardımcı sınıfları */
+svg.w-3\.5, svg.h-3\.5 { width: 14px !important; height: 14px !important; min-width: 14px !important; min-height: 14px !important; }
+svg.w-4, svg.h-4 { width: 16px !important; height: 16px !important; min-width: 16px !important; min-height: 16px !important; }
+svg.w-5, svg.h-5 { width: 20px !important; height: 20px !important; min-width: 20px !important; min-height: 20px !important; }
+svg.w-6, svg.h-6 { width: 24px !important; height: 24px !important; min-width: 24px !important; min-height: 24px !important; }
+svg.w-8, svg.h-8 { width: 32px !important; height: 32px !important; min-width: 32px !important; min-height: 32px !important; }
+
+/* Oynatıcı Kontrolleri Katmanı */
+.player-controls {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(to top, rgba(2, 6, 23, 0.98) 0%, rgba(2, 6, 23, 0.85) 60%, transparent 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Oynatma sırasında hareketsizlik durumunda kontrolleri, butonları ve fare imlecini gizle */
+.player-container.controls-hidden .player-controls,
+.player-container.controls-hidden #btnFloatingSkipIntro,
+.player-container.controls-hidden #btnFloatingSkipOutro {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.player-container.controls-hidden {
+  cursor: none !important;
+}
+
+.player-container.controls-hidden video {
+  cursor: none !important;
+}
+
+/* Duraklatıldığında veya kontroller üzerinde gezilirken daima görünür */
+.player-container.paused .player-controls,
+.player-container.paused,
+.player-container.paused video {
+  cursor: default !important;
+}
+
+/* YouTube Stili İlerleme Çubuğu (Screenshot 2 ile birebir uyumlu) */
+.progress-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 4px;
+  background: #334155;
+  outline: none;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+.progress-range:hover {
+  height: 7px;
+}
+.progress-range::-webkit-slider-runnable-track {
+  height: 100%;
+  border-radius: 4px;
+  background: transparent;
+}
+.progress-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #ef4444 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+  margin-top: -4px;
+  transition: transform 0.15s ease;
+}
+.progress-range:hover::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+.progress-range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #ef4444 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+}
+.progress-range::-moz-range-track {
+  height: 100%;
+  border-radius: 4px;
+  background: transparent;
+}
+
+/* Modern Oynatıcı Butonları */
+.ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  color: #e2e8f0;
+  background-color: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ctrl-btn:hover {
+  color: #ffffff;
+  background-color: rgba(51, 65, 85, 0.85);
+  border-color: rgba(148, 163, 184, 0.35);
+  transform: translateY(-1px);
+}
+.ctrl-btn:active {
+  transform: scale(0.93);
+}
+
+.ctrl-btn-primary {
+  background-color: rgba(37, 99, 235, 0.9);
+  color: #ffffff;
+  border-color: rgba(59, 130, 246, 0.5);
+}
+.ctrl-btn-primary:hover {
+  background-color: rgb(37, 99, 235);
+  border-color: rgb(96, 165, 250);
+}
+
+/* Oynatıcı Seçicileri */
+.ctrl-select {
+  background-color: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+  height: 24px;
+}
+.ctrl-select:hover {
+  background-color: rgba(30, 41, 59, 0.95);
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+/* İntro Atla Rozeti */
+.skip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: rgba(37, 99, 235, 0.9);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.skip-badge:hover {
+  background-color: rgb(29, 78, 216);
+}
+
+.player-container.in-window-mode {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
+  z-index: 45 !important;
+  margin: 0 !important;
+  background-color: #000000 !important;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
